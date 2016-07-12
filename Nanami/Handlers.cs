@@ -89,7 +89,7 @@ namespace Nanami {
 			data.Hurt += dmg;
 			data.Damages.Add(dmg);
 			// 记录 承受伤害量
-			PlayerData.GetData(id).Endurance += dmg;
+			PlayerData.GetData(id).Endurance += (int)Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
 
 			return false;
 		}
