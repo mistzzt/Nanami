@@ -33,9 +33,6 @@ namespace Nanami {
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 1000);
 			ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
 			ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
-
-			GetDataHandlers.PlayerDamage += OnPlayerDamage;
-			GetDataHandlers.PlayerHP += OnPlayerHP;
 		}
 
 		protected override void Dispose(bool disposing) {
@@ -51,6 +48,8 @@ namespace Nanami {
 		private void OnInitialize(EventArgs args) {
 			Config = Configuration.Read(Configuration.FilePath);
 			Config.Write(Configuration.FilePath);
+
+			Commands.ChatCommands.Add(new Command("nanami.pvp.show", Calc, "nnm"));
 		}
 
 		private void OnGreetPlayer(GreetPlayerEventArgs args) {
@@ -79,12 +78,12 @@ namespace Nanami {
 			}
 		}
 
-		private void OnPlayerDamage(object sender, GetDataHandlers.PlayerDamageEventArgs args) {
-			
-		}
-
-		private void OnPlayerHP(object sender, GetDataHandlers.PlayerHPEventArgs args) {
-			
+		private void Calc(CommandArgs args)
+		{
+			var dt = PlayerData.GetData(args.Player.Index);
+			args.Player.SendInfoMessage("--- PvP战绩 ---");
+			args.Player.SendInfoMessage("* 杀 {0} | 死 {1} | 连续 {2}", dt.Kills, dt.Deaths, dt.MaxSuccessiveKills);
+			args.Player.SendInfoMessage("* 伤害 {0} | 承受伤害量 {1}", dt.Hurt, dt.Endurance);
 		}
 	}
 }

@@ -6,11 +6,6 @@ using System.Threading.Tasks;
 
 namespace Nanami {
 	internal class PlayerData {
-		/// <summary> 等待判定玩家 </summary>
-		public bool WaitforKiller = false;
-		/// <summary> 临死受到伤害量 </summary>
-		public int DeathHurtValue;
-
 		/// <summary> 击杀 </summary>
 		public int Kills = 0;
 		/// <summary> 死亡 </summary>
@@ -26,11 +21,14 @@ namespace Nanami {
 
 		public readonly int PlayerIndex;
 
-		public Stack<int> Damages = new Stack<int>(5); 
+		public List<int> Damages = new List<int>(5); 
 
 		public PlayerData(int index) {
 			PlayerIndex = index;
 		}
+
+		public static PlayerData GetData(int index)
+			=> Nanami.PlayerDatas.SingleOrDefault(d => d.PlayerIndex == index);
 
 	}
 }

@@ -12,10 +12,10 @@ using TShockAPI;
 namespace Nanami {
 	[SuppressMessage("ReSharper", "InvertIf")] // most stolen from TShockAPI.GetDataHandlers
 	internal class Handlers {
-		private static Dictionary<PacketTypes, GetDataHandlerDelegate> GetDataHandlerDelegates
+		private static readonly Dictionary<PacketTypes, GetDataHandlerDelegate> GetDataHandlerDelegates
 			= new Dictionary<PacketTypes, GetDataHandlerDelegate> {
-				{ PacketTypes.PlayerDamage , HandlePlayerDamage},
-				{ PacketTypes.PlayerKillMe, HandleKillMe}
+				{ PacketTypes.PlayerDamage , HandlePlayerDamage },
+				{ PacketTypes.PlayerKillMe, HandleKillMe }
 
 			};
 
@@ -34,12 +34,12 @@ namespace Nanami {
 
 		private static bool HandlePlayerDamage(GetDataHandlerArgs args) {
 			var id = args.Data.ReadInt8();
-			var direction = (byte)(args.Data.ReadInt8() - 1);
+			/*var direction = (byte)(args.Data.ReadInt8() - 1);*/args.Data.ReadInt8();
 			var dmg = args.Data.ReadInt16();
 			args.Data.ReadString(); // don't store damage text
 			var bits = (BitsByte)args.Data.ReadInt8();
 			var pvp = bits[0];
-			var crit = bits[1];
+			//var crit = bits[1];
 
 			if (id >= Main.maxPlayers || TShock.Players[id] == null) {
 				return true;
@@ -84,9 +84,12 @@ namespace Nanami {
 				return true;
 			}
 
+			// 记录 伤害量
 			var data = args.Player.GetData<PlayerData>(Nanami.NanamiPlayerData);
-			data.Damages.Push(dmg);
-			Console.WriteLine("{0} 打出了 {1} 伤害。", args.Player.Name, dmg);
+			data.Hurt += dmg;
+			data.Damages.Add(dmg);
+			// 记录 承受伤害量
+			PlayerData.GetData(id).Endurance += dmg;
 
 			return false;
 		}
@@ -95,10 +98,10 @@ namespace Nanami {
 			var id = args.Data.ReadInt8();
 			var direction = (byte)(args.Data.ReadInt8() - 1);
 			var dmg = args.Data.ReadInt16();
-			var pvp = args.Data.ReadInt8() != 0; // 此处疑似是非pvp
+			var pvp = args.Data.ReadInt8(); // 此处疑似是非pvp
 			var text = args.Data.ReadString();
 
-			if (!pvp)
+			if (pvp == 0)
 				return false;
 
 			if (dmg > 20000) //Abnormal values have the potential to cause infinite loops in the server.
@@ -119,17 +122,50 @@ namespace Nanami {
 
 			args.Player.RespawnTimer = Nanami.Config.RespawnPvPSeconds;
 			var data = args.Player.GetData<PlayerData>(Nanami.NanamiPlayerData);
-			data.DeathHurtValue = dmg;
 
-			Nanami.PlayerDatas.Where(d => {
-				while (true)
-					if (d.Damages.Pop() == dmg)
-						return true;
-			}).Select(d => d.PlayerIndex).ForEach(i => Console.Write($"推测是玩家{TShock.Players[i].Name}杀死."));
-			Console.WriteLine($"{args.Player.Name}受到{dmg}死了.");
+			data.Deaths++;
+			data.Endurance -= dmg;
+
+			var killer = -1;
+			foreach (var dt in Nanami.PlayerDatas)
+			{
+				if (dt.PlayerIndex == args.Player.Index)
+					continue;
+				if (text.Contains(TShock.Players[dt.PlayerIndex].Name))
+				{
+					killer = dt.PlayerIndex;
+				}
+			}
+			if (killer == -1)
+			{
+				TShock.Log.Warn("[Nanami] {0} 的死亡消息异常: {1}",args.Player.Name, text);
+				return false;
+			}
+			var killerData = PlayerData.GetData(killer);
+			killerData.MaxSuccessiveKills++;
+			killerData.Kills++;
+
+			if (data.MaxSuccessiveKills > 1)
+				args.Player.SendInfoMessage("你已死亡, 临死前最大连续击杀数: {0}", data.MaxSuccessiveKills);
+			data.MaxSuccessiveKills = 0;
+
+			var deathText = $"被 {TShock.Players[killer].Name} 杀死了!";
 			
-			return false;
 			
+
+			Main.player[id].KillMe(dmg, direction, pvp == 1, deathText);
+			NetMessage.SendData((int)PacketTypes.PlayerKillMe, -1, id, deathText, id, direction, dmg, pvp);
+			if (killerData.MaxSuccessiveKills >= Nanami.Config.MinKillTime)
+			{
+				var clrIndex = killerData.MaxSuccessiveKills - Nanami.Config.MinKillTime;
+				var succKillText = $"{TShock.Players[killer].Name} ";
+				succKillText += Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭{killerData.MaxSuccessiveKills}人!";
+				var succKillClr = Nanami.Config.Colors.Length > clrIndex ? Nanami.Config.Colors[clrIndex] : Color.Yellow;
+
+				TShock.Utils.Broadcast(succKillText, succKillClr);
+			}
+
+			return true;
 		}
 	}
 }

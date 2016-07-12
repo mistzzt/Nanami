@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Net;
 using Newtonsoft.Json;
 using TShockAPI;
 
@@ -8,7 +9,7 @@ namespace Nanami {
 		public static readonly string FilePath = Path.Combine(TShock.SavePath, "nanami.json");
 
 		[JsonProperty("PvP玩家重生时间")]
-		public int RespawnPvPSeconds = 5;
+		public int RespawnPvPSeconds = 1;
 
 		[JsonProperty("连续击杀提示颜色")]
 		public Color[] Colors = {
@@ -32,6 +33,9 @@ namespace Nanami {
 
 		[JsonProperty("自动播报时间间隔")]
 		public int AutoBroadcastSeconds = 5;
+
+		[JsonProperty("强制使用死亡消息判断")]
+		public bool UseDeathText = true;
 
 		public static Configuration Read(string path) {
 			if (!File.Exists(path))
@@ -63,6 +67,9 @@ namespace Nanami {
 				G = g;
 				B = b;
 			}
+
+			public static implicit operator global::Color(Color clr)
+				=> new global::Color(clr.R, clr.G, clr.B);
 		}
 	}
 }
