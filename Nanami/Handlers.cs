@@ -34,12 +34,11 @@ namespace Nanami {
 
 		private static bool HandlePlayerDamage(GetDataHandlerArgs args) {
 			var id = args.Data.ReadInt8();
-			/*var direction = (byte)(args.Data.ReadInt8() - 1);*/args.Data.ReadInt8();
+			args.Data.ReadInt8();
 			var dmg = args.Data.ReadInt16();
-			args.Data.ReadString(); // don't store damage text
+			args.Data.ReadString();
 			var bits = (BitsByte)args.Data.ReadInt8();
 			var pvp = bits[0];
-			//var crit = bits[1];
 
 			if (id >= Main.maxPlayers || TShock.Players[id] == null) {
 				return true;
@@ -86,10 +85,10 @@ namespace Nanami {
 
 			// 记录 伤害量
 			var data = args.Player.GetData<PlayerData>(Nanami.NanamiPlayerData);
-			data.Hurt += dmg;
-			data.Damages.Add(dmg);
+			data.Damage(dmg, id);
+
 			// 记录 承受伤害量
-			PlayerData.GetData(id).Endurance += (int)Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
+			PlayerData.GetData(id).Hurt(dmg);
 
 			return false;
 		}
@@ -123,8 +122,8 @@ namespace Nanami {
 			args.Player.RespawnTimer = Nanami.Config.RespawnPvPSeconds;
 			var data = args.Player.GetData<PlayerData>(Nanami.NanamiPlayerData);
 
-			data.Deaths++;
-			data.Endurance -= dmg;
+			// 处理死亡事件
+			data.Die(dmg);
 
 			var killer = -1;
 			foreach (var dt in Nanami.PlayerDatas)
@@ -141,29 +140,16 @@ namespace Nanami {
 				TShock.Log.Warn("[Nanami] {0} 的死亡消息异常: {1}",args.Player.Name, text);
 				return false;
 			}
+
+			// 处理杀死事件
 			var killerData = PlayerData.GetData(killer);
-			killerData.MaxSuccessiveKills++;
-			killerData.Kills++;
+			killerData.Kill();
 
-			if (data.MaxSuccessiveKills > 1)
-				args.Player.SendInfoMessage("你已死亡, 临死前最大连续击杀数: {0}", data.MaxSuccessiveKills);
-			data.MaxSuccessiveKills = 0;
-
-			var deathText = $"被 {TShock.Players[killer].Name} 杀死了!";
-			
-			
+			var deathText = $" 被 {TShock.Players[killer].Name} 杀死了!";
 
 			Main.player[id].KillMe(dmg, direction, pvp == 1, deathText);
 			NetMessage.SendData((int)PacketTypes.PlayerKillMe, -1, id, deathText, id, direction, dmg, pvp);
-			if (killerData.MaxSuccessiveKills >= Nanami.Config.MinKillTime)
-			{
-				var clrIndex = killerData.MaxSuccessiveKills - Nanami.Config.MinKillTime;
-				var succKillText = $"{TShock.Players[killer].Name} ";
-				succKillText += Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭{killerData.MaxSuccessiveKills}人!";
-				var succKillClr = Nanami.Config.Colors.Length > clrIndex ? Nanami.Config.Colors[clrIndex] : Color.Yellow;
-
-				TShock.Utils.Broadcast(succKillText, succKillClr);
-			}
+			
 
 			return true;
 		}
