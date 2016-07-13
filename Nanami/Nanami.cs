@@ -106,19 +106,19 @@ namespace Nanami {
 			if(Main.player.Where(p => p != null && p.active).All(p => !p.hostile))
 				return;
 
-			var max = from d in PlayerDatas
+			var unsortedMax = from d in PlayerDatas
 					  where Main.player[d.PlayerIndex].hostile
-					  orderby d.MaxSuccessiveKills
-					  select new { d.MaxSuccessiveKills, d.PlayerIndex };
+					  orderby d.SuccessiveKills
+					  select d;
 
-			max = max.Reverse();
+			var max = unsortedMax.Reverse();
 
 			var sb = new StringBuilder("[PvP战绩] 连续击杀排行: ");
 			for(var i = 0; i < 3; ++i) {
 				if(max.Count() <= i)
 					break;
 
-				sb.Append($"{$"第{i + 1}名",3}{TShock.Players[max.ElementAt(i).PlayerIndex].Name,8}/{max.ElementAt(i).MaxSuccessiveKills} | ");
+				sb.Append($"{$"第{i + 1}名",3}{TShock.Players[max.ElementAt(i).PlayerIndex].Name,8}/{max.ElementAt(i).SuccessiveKills} | ");
 			}
 			var sbText = sb.ToString();
 

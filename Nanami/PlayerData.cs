@@ -43,10 +43,10 @@ namespace Nanami {
 			if(SuccessiveKills > MaxSuccessiveKills)
 				MaxSuccessiveKills = SuccessiveKills;
 
-			if(MaxSuccessiveKills >= Nanami.Config.MinKillTime) {
-				var clrIndex = MaxSuccessiveKills - Nanami.Config.MinKillTime;
+			if(SuccessiveKills >= Nanami.Config.MinKillTime) {
+				var clrIndex = SuccessiveKills - Nanami.Config.MinKillTime;
 				var succKillText = $"{TShock.Players[PlayerIndex].Name} ";
-				succKillText += Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭 {MaxSuccessiveKills} 人!";
+				succKillText += Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭 {SuccessiveKills} 人!";
 				var succKillClr = Nanami.Config.Colors.Length > clrIndex ? Nanami.Config.Colors[clrIndex] : Color.Yellow;
 
 				TShock.Utils.Broadcast(succKillText, succKillClr);
