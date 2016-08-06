@@ -10,10 +10,12 @@ using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.Hooks;
 
-namespace Nanami {
+namespace Nanami
+{
 	[ApiVersion(1, 23)]
 	[SuppressMessage("ReSharper", "MemberCanBeMadeStatic.Local")]
-	public class Nanami : TerrariaPlugin {
+	public class Nanami : TerrariaPlugin
+	{
 		public const string NanamiPlayerData = "nanami";
 
 		public override string Name => "Nanami";
@@ -27,7 +29,8 @@ namespace Nanami {
 
 		public Nanami(Main game) : base(game) { }
 
-		public override void Initialize() {
+		public override void Initialize()
+		{
 			ServerApi.Hooks.GameInitialize.Register(this, OnInitialize);
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 1000);
 			ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
@@ -37,8 +40,10 @@ namespace Nanami {
 			GetDataHandlers.TogglePvp += OnPvpToggle;
 		}
 
-		protected override void Dispose(bool disposing) {
-			if(disposing) {
+		protected override void Dispose(bool disposing)
+		{
+			if (disposing)
+			{
 				ServerApi.Hooks.GameInitialize.Deregister(this, OnInitialize);
 				ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
 				ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnGreetPlayer);
@@ -48,23 +53,26 @@ namespace Nanami {
 			base.Dispose(disposing);
 		}
 
-		private void OnInitialize(EventArgs args) {
+		private void OnInitialize(EventArgs args)
+		{
 			Config = Configuration.Read(Configuration.FilePath);
 			Config.Write(Configuration.FilePath);
 
 			Commands.ChatCommands.Add(new Command("nanami.pvp.show", Show, "pvp", "战绩"));
 			Commands.ChatCommands.Add(new Command("nanami.pvp.switch", Switch, "pvpm", "统计"));
 
-			GeneralHooks.ReloadEvent += e => {
+			GeneralHooks.ReloadEvent += e =>
+			{
 				Config = Configuration.Read(Configuration.FilePath);
 				Config.Write(Configuration.FilePath);
 				e.Player.SendSuccessMessage("已重新载入 Nanami 配置.");
 			};
 		}
 
-		private void OnGreetPlayer(GreetPlayerEventArgs args) {
+		private void OnGreetPlayer(GreetPlayerEventArgs args)
+		{
 			var player = TShock.Players[args.Who];
-			if(player == null)
+			if (player == null)
 				return;
 
 			var data = new PlayerData(player.Index);
@@ -75,77 +83,87 @@ namespace Nanami {
 		private void OnLeave(LeaveEventArgs args)
 			=> PlayerDatas.RemoveAll(data => data.PlayerIndex == args.Who);
 
-		private void OnGetData(GetDataEventArgs args) {
-			if(!PluginEnabled)
+		private void OnGetData(GetDataEventArgs args)
+		{
+			if (!PluginEnabled)
 				return;
 
 			var type = args.MsgID;
 
 			var player = TShock.Players[args.Msg.whoAmI];
-			if(player == null || !player.ConnectionAlive) {
+			if (player == null || !player.ConnectionAlive)
+			{
 				return;
 			}
 
-			using(var data = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length - 1)) {
+			using (var data = new MemoryStream(args.Msg.readBuffer, args.Index, args.Length - 1))
+			{
 				args.Handled = Handlers.HandleGetData(type, player, data);
 			}
 		}
 
 		private DateTime _lastCheck = DateTime.UtcNow;
 
-		private void OnUpdate(EventArgs args) {
-			if(!PluginEnabled)
+		private void OnUpdate(EventArgs args)
+		{
+			if (!PluginEnabled)
 				return;
 
-			if(!Config.AutoBroadcastBestKiller)
+			if (!Config.AutoBroadcastBestKiller)
 				return;
 
-			if(!((DateTime.UtcNow - _lastCheck).TotalSeconds >= Config.AutoBroadcastSeconds))
+			if (!((DateTime.UtcNow - _lastCheck).TotalSeconds >= Config.AutoBroadcastSeconds))
 				return;
 
-			if(Main.player.Where(p => p != null && p.active).All(p => !p.hostile))
+			if (Main.player.Where(p => p != null && p.active).All(p => !p.hostile))
 				return;
 
 			var unsortedMax = from d in PlayerDatas
-					  where Main.player[d.PlayerIndex].hostile
-					  orderby d.SuccessiveKills
-					  select d;
+							  where Main.player[d.PlayerIndex].hostile
+							  orderby d.SuccessiveKills
+							  select d;
 
 			var max = unsortedMax.Reverse();
 
 			var sb = new StringBuilder("[PvP战绩] 连续击杀排行: ");
-			for(var i = 0; i < 3; ++i) {
-				if(max.Count() <= i)
+			for (var i = 0; i < 3; ++i)
+			{
+				if (max.Count() <= i)
 					break;
 
 				sb.Append($"{$"第{i + 1}名",3}{TShock.Players[max.ElementAt(i).PlayerIndex].Name,8}/{max.ElementAt(i).SuccessiveKills} | ");
 			}
 			var sbText = sb.ToString();
 
-			TShock.Players.Where(p => p != null && p.Active && p.RealPlayer && p.TPlayer.hostile).ForEach(p => {
+			TShock.Players.Where(p => p != null && p.Active && p.RealPlayer && p.TPlayer.hostile).ForEach(p =>
+			{
 				p.SendMessage(sbText, Color.Orange);
 			});
 
 			_lastCheck = DateTime.UtcNow;
 		}
 
-		private void OnPvpToggle(object sender, GetDataHandlers.TogglePvpEventArgs args) {
-			if(!args.Pvp)
+		private void OnPvpToggle(object sender, GetDataHandlers.TogglePvpEventArgs args)
+		{
+			if (!args.Pvp)
 				return;
 
-			if(!PluginEnabled)
+			if (!PluginEnabled)
 				return;
 
 			TShock.Players[args.PlayerId].SendInfoMessage("你可以通过 {0} 查看你的战绩.", TShock.Utils.ColorTag("/pvp", Color.LightSkyBlue));
 		}
 
-		private void Show(CommandArgs args) {
-			if(!PluginEnabled) {
+		private void Show(CommandArgs args)
+		{
+			if (!PluginEnabled)
+			{
 				args.Player.SendErrorMessage("PvP战绩记录功能未启用.");
 				return;
 			}
 
-			if(!args.Player.RealPlayer) {
+			if (!args.Player.RealPlayer)
+			{
 				args.Player.SendErrorMessage("只有玩家才能使用战绩.");
 				return;
 			}
@@ -157,10 +175,11 @@ namespace Nanami {
 			args.Player.SendInfoMessage($"{"",11}* | 死亡 {dt.Deaths,8} | {"最大连续消灭",6} {dt.MaxSuccessiveKills,8} |");
 		}
 
-		private void Switch(CommandArgs args) {
+		private void Switch(CommandArgs args)
+		{
 			PluginEnabled = !PluginEnabled;
 			args.Player.SendInfoMessage("{0}PvP战绩统计功能.", PluginEnabled ? "开启" : "关闭");
-			if(PluginEnabled)
+			if (PluginEnabled)
 				TSPlayer.All.SendInfoMessage("PvP战绩记录已开启! 使用 {0} 查看.", TShock.Utils.ColorTag("/pvp", Color.LightSkyBlue));
 		}
 	}

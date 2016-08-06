@@ -3,9 +3,11 @@ using System.Linq;
 using Terraria;
 using TShockAPI;
 
-namespace Nanami {
+namespace Nanami
+{
 	[SuppressMessage("ReSharper", "InvertIf")]
-	internal class PlayerData {
+	internal class PlayerData
+	{
 		/// <summary> 击杀 </summary>
 		public int Kills { get; private set; }
 
@@ -26,7 +28,8 @@ namespace Nanami {
 
 		public readonly int PlayerIndex;
 
-		public PlayerData(int index) {
+		public PlayerData(int index)
+		{
 			PlayerIndex = index;
 		}
 
@@ -36,20 +39,21 @@ namespace Nanami {
 		/// <summary>
 		/// 玩家歼敌事件
 		/// </summary>
-		public void Kill() {
+		public void Kill(ref string deathText)
+		{
 			Kills++;
 			SuccessiveKills++;
 
-			if(SuccessiveKills > MaxSuccessiveKills)
+			if (SuccessiveKills > MaxSuccessiveKills)
 				MaxSuccessiveKills = SuccessiveKills;
 
-			if(SuccessiveKills >= Nanami.Config.MinKillTime) {
+			if (SuccessiveKills >= Nanami.Config.MinKillTime)
+			{
 				var clrIndex = SuccessiveKills - Nanami.Config.MinKillTime;
-				var succKillText = $"{TShock.Players[PlayerIndex].Name} ";
-				succKillText += Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭 {SuccessiveKills} 人!";
+				var gradeMsg = string.Format("{0} {1}", TShock.Players[PlayerIndex].Name,
+					Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭 {SuccessiveKills} 人!");
 				var succKillClr = Nanami.Config.Colors.Length > clrIndex ? Nanami.Config.Colors[clrIndex] : Color.Yellow;
-
-				TShock.Utils.Broadcast(succKillText, succKillClr);
+				deathText += TShock.Utils.ColorTag(gradeMsg, succKillClr);
 			}
 		}
 
@@ -57,10 +61,11 @@ namespace Nanami {
 		/// 玩家死亡事件
 		/// </summary>
 		/// <param name="dmg">未经计算的攻击数值</param>
-		public void Die(int dmg) {
+		public void Die(int dmg)
+		{
 			Deaths++;
 			Endurance -= (int)Main.CalculatePlayerDamage(dmg, Main.player[PlayerIndex].statDefense);
-			if(SuccessiveKills >= Nanami.Config.MinKillTime)
+			if (SuccessiveKills >= Nanami.Config.MinKillTime)
 				TShock.Players[PlayerIndex].SendInfoMessage("你已死亡, 临死前最大连续击杀数: {0}", SuccessiveKills);
 			SuccessiveKills = 0;
 		}
@@ -69,7 +74,8 @@ namespace Nanami {
 		/// 玩家受伤事件
 		/// </summary>
 		/// <param name="dmg">未经计算的攻击数值</param>
-		public void Hurt(int dmg) {
+		public void Hurt(int dmg)
+		{
 			Endurance += (int)Main.CalculatePlayerDamage(dmg, Main.player[PlayerIndex].statDefense);
 		}
 
@@ -80,7 +86,7 @@ namespace Nanami {
 		/// <param name="id">受攻击玩家序号</param>
 		public void Damage(int dmg, int id)
 		{
-			Hurts += (int) Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
+			Hurts += (int)Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
 		}
 	}
 }

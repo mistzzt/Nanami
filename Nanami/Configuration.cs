@@ -3,9 +3,11 @@ using System.Net;
 using Newtonsoft.Json;
 using TShockAPI;
 
-namespace Nanami {
+namespace Nanami
+{
 	[JsonObject(MemberSerialization.OptIn)]
-	public class Configuration {
+	public class Configuration
+	{
 		public static readonly string FilePath = Path.Combine(TShock.SavePath, "nanami.json");
 
 		[JsonProperty("PvP玩家重生时间")]
@@ -37,32 +39,40 @@ namespace Nanami {
 		[JsonProperty("强制使用死亡消息判断")]
 		public bool UseDeathText = true;
 
-		public static Configuration Read(string path) {
+		public static Configuration Read(string path)
+		{
 			if (!File.Exists(path))
 				return new Configuration();
-			using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read)) {
-				using (var sr = new StreamReader(fs)) {
+			using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+			{
+				using (var sr = new StreamReader(fs))
+				{
 					var cf = JsonConvert.DeserializeObject<Configuration>(sr.ReadToEnd());
 					return cf;
 				}
 			}
 		}
 
-		public void Write(string path) {
-			using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Write)) {
+		public void Write(string path)
+		{
+			using (var fs = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.Write))
+			{
 				var str = JsonConvert.SerializeObject(this, Formatting.Indented);
-				using (var sw = new StreamWriter(fs)) {
+				using (var sw = new StreamWriter(fs))
+				{
 					sw.Write(str);
 				}
 			}
 		}
 
-		public struct Color {
+		public struct Color
+		{
 			public int R;
 			public int G;
 			public int B;
 
-			public Color(int r, int g, int b) {
+			public Color(int r, int g, int b)
+			{
 				R = r;
 				G = g;
 				B = b;
