@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Streams;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Terraria;
 using TShockAPI;
 
 namespace Nanami
 {
-	[SuppressMessage("ReSharper", "InvertIf")] // most stolen from TShockAPI.GetDataHandlers
+	[SuppressMessage("ReSharper", "InvertIf")]
 	internal class Handlers
 	{
 		private static readonly Dictionary<PacketTypes, GetDataHandlerDelegate>
@@ -101,11 +98,11 @@ namespace Nanami
 			}
 
 			// 记录 伤害量
-			var data = args.Player.GetData<PlayerData>(Nanami.NanamiPlayerData);
+			var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
 			data.Damage(dmg, id);
 
 			// 记录 承受伤害量
-			PlayerData.GetData(id).Hurt(dmg);
+			PlayerPvpData.GetData(id).Hurt(dmg);
 
 			return false;
 		}
@@ -142,24 +139,28 @@ namespace Nanami
 			}
 
 			args.Player.RespawnTimer = Nanami.Config.RespawnPvPSeconds;
-			var data = args.Player.GetData<PlayerData>(Nanami.NanamiPlayerData);
+			var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
 
 			// 处理死亡事件
 			data.Die(dmg);
 
 			var killer = -1;
-			foreach (var dt in Nanami.PlayerDatas)
+			foreach (var ply in TShock.Players)
 			{
-				if (dt.PlayerIndex == args.Player.Index)
+				if (ply != null && ply.Active && ply.TPlayer.hostile)
 				{
-					continue;
-				}
+					if (ply.Index == args.Player.Index)
+					{
+						continue;
+					}
 
-				if (text.Contains(TShock.Players[dt.PlayerIndex].Name))
-				{
-					killer = dt.PlayerIndex;
+					if (text.Contains(ply.Name))
+					{
+						killer = ply.Index;
+					}
 				}
 			}
+
 			if (killer == -1)
 			{
 				TShock.Log.ConsoleError("[Nanami] {0} 的死亡消息异常: {0} {1}", args.Player.Name, text);
@@ -169,7 +170,7 @@ namespace Nanami
 			var deathText = $" 被 {TShock.Players[killer].Name} 杀死了!";
 
 			// 处理杀死事件
-			var killerData = PlayerData.GetData(killer);
+			var killerData = PlayerPvpData.GetData(killer);
 			killerData.Kill(ref deathText);
 
 			Main.player[id].KillMe(dmg, direction, pvp == 1, deathText);

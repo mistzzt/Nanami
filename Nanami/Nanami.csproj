@@ -41,9 +41,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Configuration.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="Handlers.cs" />
     <Compile Include="Nanami.cs" />
-    <Compile Include="PlayerData.cs" />
+    <Compile Include="PlayerPvpData.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

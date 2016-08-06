@@ -1,12 +1,11 @@
 ﻿using System.Diagnostics.CodeAnalysis;
-using System.Linq;
 using Terraria;
 using TShockAPI;
 
 namespace Nanami
 {
 	[SuppressMessage("ReSharper", "InvertIf")]
-	internal class PlayerData
+	internal class PlayerPvpData
 	{
 		/// <summary> 击杀 </summary>
 		public int Kills { get; private set; }
@@ -28,13 +27,22 @@ namespace Nanami
 
 		public readonly int PlayerIndex;
 
-		public PlayerData(int index)
+		public PlayerPvpData(int index)
 		{
 			PlayerIndex = index;
 		}
 
-		public static PlayerData GetData(int index)
-			=> Nanami.PlayerDatas.SingleOrDefault(d => d.PlayerIndex == index);
+		public static PlayerPvpData GetData(int index)
+		{
+#if DEBUG
+			var player = TShock.Players[index].NotNull();
+			var data = player.GetData<PlayerPvpData>(Nanami.NanamiPvpData).NotNull();
+#else
+			var player = TShock.Players[index];
+			var data = player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+#endif
+			return data;
+		}
 
 		/// <summary>
 		/// 玩家歼敌事件
