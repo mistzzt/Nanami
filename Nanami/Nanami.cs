@@ -12,7 +12,7 @@ using TShockAPI.Hooks;
 
 namespace Nanami
 {
-	[ApiVersion(1, 24)]
+	[ApiVersion(1, 25)]
 	[SuppressMessage("ReSharper", "MemberCanBeMadeStatic.Local")]
 	public class Nanami : TerrariaPlugin
 	{
