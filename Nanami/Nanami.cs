@@ -9,10 +9,11 @@ using Terraria;
 using TerrariaApi.Server;
 using TShockAPI;
 using TShockAPI.Hooks;
+using Microsoft.Xna.Framework;
 
 namespace Nanami
 {
-	[ApiVersion(1, 25)]
+	[ApiVersion(2, 0)]
 	[SuppressMessage("ReSharper", "MemberCanBeMadeStatic.Local")]
 	public class Nanami : TerrariaPlugin
 	{
@@ -54,6 +55,7 @@ namespace Nanami
 
 				GetDataHandlers.TogglePvp -= OnPvpToggle;
 				GeneralHooks.ReloadEvent -= OnReload;
+				_updateTextTimer.Dispose();
 			}
 			base.Dispose(disposing);
 		}

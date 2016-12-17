@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using Terraria;
 using TShockAPI;
+using Microsoft.Xna.Framework;
 
 namespace Nanami
 {
@@ -81,20 +82,20 @@ namespace Nanami
 		/// <summary>
 		/// 玩家受伤事件
 		/// </summary>
-		/// <param name="dmg">未经计算的攻击数值</param>
-		public void Hurt(int dmg)
+		/// <param name="calculatedDmg">经计算的攻击数值</param>
+		public void Hurt(int calculatedDmg)
 		{
-			Endurance += (int)Main.CalculatePlayerDamage(dmg, Main.player[PlayerIndex].statDefense);
+			Endurance += calculatedDmg;
 		}
 
 		/// <summary>
 		/// 玩家攻击事件
 		/// </summary>
-		/// <param name="dmg">未经计算的攻击数值</param>
+		/// <param name="calculatedDmg">经计算的攻击数值</param>
 		/// <param name="id">受攻击玩家序号</param>
-		public void Damage(int dmg, int id)
+		public void Damage(int calculatedDmg)
 		{
-			Hurts += (int)Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
+			Hurts += calculatedDmg;
 		}
 	}
 }

@@ -77,8 +77,8 @@ namespace Nanami
 				B = b;
 			}
 
-			public static implicit operator global::Color(Color clr)
-				=> new global::Color(clr.R, clr.G, clr.B);
+			public static implicit operator Microsoft.Xna.Framework.Color(Color clr)
+				=> new Microsoft.Xna.Framework.Color(clr.R, clr.G, clr.B);
 		}
 	}
 }

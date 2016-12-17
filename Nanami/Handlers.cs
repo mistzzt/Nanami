@@ -4,6 +4,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Streams;
 using Terraria;
+using Terraria.DataStructures;
 using TShockAPI;
 
 namespace Nanami
@@ -15,7 +16,9 @@ namespace Nanami
 			GetDataHandlerDelegates = new Dictionary<PacketTypes, GetDataHandlerDelegate>
 			{
 				{ PacketTypes.PlayerDamage , HandlePlayerDamage },
-				{ PacketTypes.PlayerKillMe, HandleKillMe }
+				{ PacketTypes.PlayerKillMe, HandleKillMe },
+				{ PacketTypes.PlayerDeathV2, HandleKillMeV2 },
+				{ PacketTypes.PlayerHurtV2, HandleHurtV2 }
 			};
 
 		public static bool HandleGetData(PacketTypes type, TSPlayer player, MemoryStream data)
@@ -99,10 +102,13 @@ namespace Nanami
 
 			// 记录 伤害量
 			var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
-			data.Damage(dmg, id);
+
+			var calculatedDmg = (int) Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
+
+			data.Damage(calculatedDmg);
 
 			// 记录 承受伤害量
-			PlayerPvpData.GetData(id).Hurt(dmg);
+			PlayerPvpData.GetData(id).Hurt(calculatedDmg);
 
 			return false;
 		}
@@ -173,10 +179,160 @@ namespace Nanami
 			var killerData = PlayerPvpData.GetData(killer);
 			killerData.Kill(ref deathText);
 
-			Main.player[id].KillMe(dmg, direction, pvp == 1, deathText);
+			Main.player[id].KillMeOld(dmg, direction, pvp == 1, deathText);
 			NetMessage.SendData((int)PacketTypes.PlayerKillMe, -1, id, deathText, id, direction, dmg, pvp);
 
 			return true;
+		}
+
+		private static bool HandleKillMeV2(GetDataHandlerArgs args)
+		{
+			using (var br = new BinaryReader(args.Data))
+			{
+				int plr = br.ReadByte();
+				var playerDeathReason2 = PlayerDeathReason.FromReader(br);
+				int dmg = br.ReadInt16();
+				var direction = br.ReadByte() - 1;
+				var pvp2 = ((BitsByte)br.ReadByte())[0];
+
+				if (!pvp2)
+					return false;
+
+				if (dmg > 20000) //Abnormal values have the potential to cause infinite loops in the server.
+				{
+					TShock.Utils.ForceKick(args.Player, "尝试破坏服务器.", true);
+					TShock.Log.ConsoleError("死亡数值上限攻击: 数值 {0}", dmg);
+					return false;
+				}
+
+				if (plr >= Main.maxPlayers)
+				{
+					return true;
+				}
+
+				if (!string.IsNullOrWhiteSpace(playerDeathReason2.SourceCustomReason) && playerDeathReason2.SourceCustomReason?.Length > 500)
+				{
+					TShock.Utils.Kick(TShock.Players[plr], "尝试破坏服务器.", true);
+					return true;
+				}
+
+				args.Player.RespawnTimer = Nanami.Config.RespawnPvPSeconds;
+				var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+
+				// 处理死亡事件
+				data.Die(dmg);
+
+				var killer = playerDeathReason2.SourcePlayerIndex;
+				var killerProj = playerDeathReason2.SourceProjectileType;
+				var killerItem = playerDeathReason2.SourceItemType;
+
+				var deathText = " 被{0}的{1}杀死了!";
+
+				if (killerProj != 0)
+				{
+					deathText = string.Format(deathText, TShock.Players[killer].Name, Lang.GetProjectileNameByType(killerProj));
+				}
+				else if (killerItem != 0)
+				{
+					deathText = string.Format(deathText, TShock.Players[killer].Name, Lang.itemName(killerItem));
+				}
+				else
+				{
+					deathText = $" 被{TShock.Players[killer].Name}杀死了!";
+				}
+
+				// 处理杀死事件
+				var killerData = PlayerPvpData.GetData(killer);
+				killerData.Kill(ref deathText);
+
+				playerDeathReason2.SourceCustomReason = deathText;
+
+				Main.player[plr].KillMe(playerDeathReason2, dmg, direction, pvp2);
+				NetMessage.SendPlayerDeath(plr, playerDeathReason2, dmg, direction, pvp2, -1, args.Player.Index);
+
+				return true;
+			}
+		}
+
+		private static bool HandleHurtV2(GetDataHandlerArgs args)
+		{
+			using (var br = new BinaryReader(args.Data))
+			{
+				int plr = br.ReadByte();
+				if (!Main.player[plr].hostile || !args.TPlayer.hostile)
+				{
+					return false;
+				}
+				PlayerDeathReason.FromReader(br);
+				int dmg = br.ReadInt16();
+				br.ReadByte();
+				BitsByte bitsByte19 = br.ReadByte();
+				var pvp = bitsByte19[1];
+				br.ReadSByte();
+
+				if (plr >= Main.maxPlayers || TShock.Players[plr] == null)
+				{
+					return true;
+				}
+
+				if (!pvp) // 玩家受到普通伤害
+					return false;
+
+				if (dmg > TShock.Config.MaxDamage && !args.Player.HasPermission(Permissions.ignoredamagecap) && plr != args.Player.Index)
+				{
+					if (TShock.Config.KickOnDamageThresholdBroken)
+					{
+						TShock.Utils.Kick(args.Player, $"玩家攻击数值超过 {TShock.Config.MaxDamage}.");
+						return true;
+					}
+					else
+					{
+						args.Player.Disable($"玩家攻击数值超过 {TShock.Config.MaxDamage}.", DisableFlags.WriteToLogAndConsole);
+					}
+					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
+					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
+					return true;
+				}
+
+				if (!TShock.Players[plr].TPlayer.hostile && pvp && plr != args.Player.Index)
+				{
+					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
+					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
+					return true;
+				}
+
+				if (TShock.CheckIgnores(args.Player))
+				{
+					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
+					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
+					return true;
+				}
+
+				if (TShock.CheckRangePermission(args.Player, TShock.Players[plr].TileX, TShock.Players[plr].TileY, 100))
+				{
+					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
+					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
+					return true;
+				}
+
+				if ((DateTime.UtcNow - args.Player.LastThreat).TotalMilliseconds < 5000)
+				{
+					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
+					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
+					return true;
+				}
+
+				// 记录 伤害量
+				var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+
+				var calculatedDamage = (int)Main.CalculatePlayerDamage(dmg, Main.player[plr].statDefense);
+				data.Damage(calculatedDamage);
+
+				// 记录 承受伤害量
+				PlayerPvpData.GetData(plr).Hurt(calculatedDamage);
+
+				return false;
+			}
 		}
 	}
 }
