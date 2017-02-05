@@ -35,13 +35,9 @@ namespace Nanami
 
 		public static PlayerPvpData GetData(int index)
 		{
-#if DEBUG
-			var player = TShock.Players[index].NotNull();
-			var data = player.GetData<PlayerPvpData>(Nanami.NanamiPvpData).NotNull();
-#else
 			var player = TShock.Players[index];
 			var data = player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
-#endif
+
 			return data;
 		}
 
@@ -59,9 +55,12 @@ namespace Nanami
 			if (SuccessiveKills >= Nanami.Config.MinKillTime)
 			{
 				var clrIndex = SuccessiveKills - Nanami.Config.MinKillTime;
+
 				var gradeMsg = string.Format(" {0} {1}", TShock.Players[PlayerIndex].Name,
 					Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭 {SuccessiveKills} 人!");
-				var succKillClr = Nanami.Config.Colors.Length > clrIndex ? Nanami.Config.Colors[clrIndex] : Color.Yellow;
+
+				var succKillClr = Nanami.Config.RealColors.Length > clrIndex ? Nanami.Config.RealColors[clrIndex] : Color.Yellow;
+
 				deathText += TShock.Utils.ColorTag(gradeMsg, succKillClr);
 			}
 		}
@@ -92,7 +91,6 @@ namespace Nanami
 		/// 玩家攻击事件
 		/// </summary>
 		/// <param name="calculatedDmg">经计算的攻击数值</param>
-		/// <param name="id">受攻击玩家序号</param>
 		public void Damage(int calculatedDmg)
 		{
 			Hurts += calculatedDmg;
