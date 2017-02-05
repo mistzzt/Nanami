@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("MistZZT")]
 [assembly: AssemblyProduct("Nanami")]
-[assembly: AssemblyCopyright("Copyright © MistZZT 2016")]
+[assembly: AssemblyCopyright("Copyright © MistZZT 2017")]
 [assembly: AssemblyTrademark("MistZZT")]
 [assembly: AssemblyCulture("zh-CN")]
 
@@ -14,5 +14,5 @@ using System.Runtime.InteropServices;
 
 [assembly: Guid("b49e9c1a-98e4-44ef-bf1f-c98ee97068c3")]
 
-[assembly: AssemblyVersion("0.7.0.0")]
-[assembly: AssemblyFileVersion("0.7.0.0")]
+[assembly: AssemblyVersion("0.8.0.0")]
+[assembly: AssemblyFileVersion("0.8.0.0")]
