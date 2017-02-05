@@ -72,7 +72,7 @@ namespace Nanami
 				return true;
 			}
 
-			if (!TShock.Players[id].TPlayer.hostile && pvp && id != args.Player.Index)
+			if (!TShock.Players[id].TPlayer.hostile && id != args.Player.Index)
 			{
 				args.Player.SendData(PacketTypes.PlayerHp, "", id);
 				args.Player.SendData(PacketTypes.PlayerUpdate, "", id);
@@ -247,8 +247,8 @@ namespace Nanami
 
 				playerDeathReason2.SourceCustomReason = deathText;
 
-				Main.player[plr].KillMe(playerDeathReason2, dmg, direction, pvp2);
-				NetMessage.SendPlayerDeath(plr, playerDeathReason2, dmg, direction, pvp2, -1, args.Player.Index);
+				Main.player[plr].KillMe(playerDeathReason2, dmg, direction, true);
+				NetMessage.SendPlayerDeath(plr, playerDeathReason2, dmg, direction, true, -1, args.Player.Index);
 
 				return true;
 			}
@@ -285,6 +285,7 @@ namespace Nanami
 						TShock.Utils.Kick(args.Player, $"玩家攻击数值超过 {TShock.Config.MaxDamage}.");
 						return true;
 					}
+					// ReSharper disable once RedundantIfElseBlock
 					else
 					{
 						args.Player.Disable($"玩家攻击数值超过 {TShock.Config.MaxDamage}.", DisableFlags.WriteToLogAndConsole);
@@ -294,7 +295,7 @@ namespace Nanami
 					return true;
 				}
 
-				if (!TShock.Players[plr].TPlayer.hostile && pvp && plr != args.Player.Index)
+				if (!TShock.Players[plr].TPlayer.hostile && plr != args.Player.Index)
 				{
 					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
 					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
