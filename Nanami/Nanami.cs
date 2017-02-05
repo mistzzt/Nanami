@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -14,7 +13,6 @@ using Microsoft.Xna.Framework;
 namespace Nanami
 {
 	[ApiVersion(2, 0)]
-	[SuppressMessage("ReSharper", "MemberCanBeMadeStatic.Local")]
 	public class Nanami : TerrariaPlugin
 	{
 		public const string NanamiPvpData = "nanami-pvp";
@@ -36,7 +34,6 @@ namespace Nanami
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 1000);
 			ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
 			ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
-			ServerApi.Hooks.GameUpdate.Register(this, OnUpdate);
 
 			GetDataHandlers.TogglePvp += OnPvpToggle;
 			GeneralHooks.ReloadEvent += OnReload;
@@ -51,7 +48,6 @@ namespace Nanami
 				ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
 				ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnGreetPlayer);
 				ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
-				ServerApi.Hooks.GameUpdate.Deregister(this, OnUpdate);
 
 				GetDataHandlers.TogglePvp -= OnPvpToggle;
 				GeneralHooks.ReloadEvent -= OnReload;
@@ -60,7 +56,7 @@ namespace Nanami
 			base.Dispose(disposing);
 		}
 
-		private void OnInitialize(EventArgs args)
+		private static void OnInitialize(EventArgs args)
 		{
 			Config = Configuration.Read(Configuration.FilePath);
 			Config.Write(Configuration.FilePath);
@@ -121,7 +117,7 @@ namespace Nanami
 			_timerCount = 0;
 		}
 
-		private void OnGreetPlayer(GreetPlayerEventArgs args)
+		private static void OnGreetPlayer(GreetPlayerEventArgs args)
 		{
 			var player = TShock.Players[args.Who];
 			if (player == null)
@@ -131,10 +127,10 @@ namespace Nanami
 			player.SetData(NanamiPvpData, data);
 		}
 
-		private void OnLeave(LeaveEventArgs args)
+		private static void OnLeave(LeaveEventArgs args)
 			=> TShock.Players[args.Who]?.RemoveData(NanamiPvpData);
 
-		private void OnGetData(GetDataEventArgs args)
+		private static void OnGetData(GetDataEventArgs args)
 		{
 			if (args.Handled)
 			{
@@ -155,11 +151,7 @@ namespace Nanami
 			}
 		}
 
-		private void OnUpdate(EventArgs args)
-		{
-		}
-
-		private void OnPvpToggle(object sender, GetDataHandlers.TogglePvpEventArgs args)
+		private static void OnPvpToggle(object sender, GetDataHandlers.TogglePvpEventArgs args)
 		{
 			if (!args.Pvp)
 			{
@@ -170,7 +162,7 @@ namespace Nanami
 				.SendInfoMessage("你可以通过 {0} 查看你的战绩.", TShock.Utils.ColorTag("/pvp", Color.LightSkyBlue));
 		}
 
-		private void Show(CommandArgs args)
+		private static void Show(CommandArgs args)
 		{
 			if (!args.Player.RealPlayer)
 			{
