@@ -1,5 +1,4 @@
 ﻿using System.IO;
-using System.Linq;
 using Microsoft.Xna.Framework;
 using Newtonsoft.Json;
 using TShockAPI;
@@ -14,26 +13,51 @@ namespace Nanami
 		[JsonProperty("PvP玩家重生时间")]
 		public int RespawnPvPSeconds = 5;
 
-		[JsonProperty("连续击杀提示颜色")]
-		public byte[][] Colors = {
-			new byte[] {255, 0, 255},
-			new byte[] {255, 0, 0},
-			new byte[] {0, 255, 255},
-			new byte[] {108, 166, 205},
-			new byte[] {159, 182, 205},
-			new byte[] {219, 112, 147}
-		};
-
-		public Color[] RealColors { get; private set; }
-
 		[JsonProperty("连续击杀提示文本")]
-		public string[] KillsText = {
-			"双杀!",
-			"连续消灭三人!",
-			"连续消灭四人! 吼啊!",
-			"成功取得五人斩!",
-			"连续歼灭六人! 来人阻止他!",
-			"连续杀了七个! 强啊"
+		public KillText[] KillTexts =
+		{
+			new KillText
+			{
+				Text = "双杀!",
+				R = 255,
+				B = 0,
+				G = 255
+			},
+			new KillText
+			{
+				Text = "连续消灭三人!",
+				R = 255,
+				B = 0,
+				G = 0
+			},
+			new KillText
+			{
+				Text = "连续消灭四人! 吼啊!",
+				R = 0,
+				B = 255,
+				G = 255
+			},
+			new KillText
+			{
+				Text = "成功取得五人斩!",
+				R = 108,
+				B = 166,
+				G = 205
+			},
+			new KillText
+			{
+				Text = "连续歼灭六人! 来人阻止他!",
+				R = 159,
+				B = 182,
+				G = 205
+			},
+			new KillText
+			{
+				Text = "连续杀了七个! 强啊",
+				R = 219,
+				B = 112,
+				G = 147
+			}
 		};
 
 		[JsonProperty("提示最少连续击杀")]
@@ -54,7 +78,6 @@ namespace Nanami
 				using (var sr = new StreamReader(fs))
 				{
 					var cf = JsonConvert.DeserializeObject<Configuration>(sr.ReadToEnd());
-					cf.RealColors = cf.Colors.Select(c => new Color(c[0], c[1], c[2])).ToArray(); // 加载颜色
 					return cf;
 				}
 			}
@@ -70,6 +93,22 @@ namespace Nanami
 					sw.Write(str);
 				}
 			}
+		}
+	}
+
+	public struct KillText
+	{
+		public string Text { get; set; }
+
+		public byte R { get; set; }
+
+		public byte B { get; set; }
+
+		public byte G { get; set; }
+
+		public string GetColorTag()
+		{
+			return TShock.Utils.ColorTag(Text, new Color(R, G, B));
 		}
 	}
 }

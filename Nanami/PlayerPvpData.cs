@@ -56,12 +56,11 @@ namespace Nanami
 			{
 				var clrIndex = SuccessiveKills - Nanami.Config.MinKillTime;
 
-				var gradeMsg = string.Format(" {0} {1}", TShock.Players[PlayerIndex].Name,
-					Nanami.Config.KillsText.Length > clrIndex ? Nanami.Config.KillsText[clrIndex] : $"连续消灭 {SuccessiveKills} 人!");
+				var msg = Nanami.Config.KillTexts.Length > clrIndex ?
+					Nanami.Config.KillTexts[clrIndex].GetColorTag() :
+					TShock.Utils.ColorTag($"连续消灭 {SuccessiveKills} 人!", Color.Yellow);
 
-				var succKillClr = Nanami.Config.RealColors.Length > clrIndex ? Nanami.Config.RealColors[clrIndex] : Color.Yellow;
-
-				deathText += TShock.Utils.ColorTag(gradeMsg, succKillClr);
+				deathText += msg;
 			}
 		}
 
