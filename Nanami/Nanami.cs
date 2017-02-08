@@ -23,6 +23,7 @@ namespace Nanami
 		public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
 
 		internal static Configuration Config;
+		internal static PvpDataManager PvpDatas;
 		private Timer _updateTextTimer;
 
 		public Nanami(Main game) : base(game) { }
@@ -37,6 +38,8 @@ namespace Nanami
 
 			GetDataHandlers.TogglePvp += OnPvpToggle;
 			GeneralHooks.ReloadEvent += OnReload;
+
+			PvpDatas = new PvpDataManager(TShock.DB);
 		}
 
 		protected override void Dispose(bool disposing)
@@ -96,7 +99,7 @@ namespace Nanami
 				from player in TShock.Players
 				where player != null && player.Active && player.RealPlayer && player.TPlayer.hostile
 				let data = PlayerPvpData.GetData(player.Index)
-				orderby data.SuccessiveKills descending
+				orderby data.KillStreak descending
 				select data;
 
 			var sb = new StringBuilder("[PvP战绩] 连续击杀排行: ");
@@ -105,7 +108,7 @@ namespace Nanami
 				if (max.Count() <= i)
 					break;
 
-				sb.Append($"{$"第{i + 1}名",3}{TShock.Players[max.ElementAt(i).PlayerIndex].Name,8}/{max.ElementAt(i).SuccessiveKills} | ");
+				sb.Append($"{$"第{i + 1}名",3}{TShock.Players[max.ElementAt(i).PlayerIndex].Name,8}/{max.ElementAt(i).KillStreak} | ");
 			}
 			var sbText = sb.ToString();
 
@@ -123,12 +126,20 @@ namespace Nanami
 			if (player == null)
 				return;
 
-			var data = new PlayerPvpData(player.Index);
+			var data = PvpDatas.Load(player);
 			player.SetData(NanamiPvpData, data);
 		}
 
 		private static void OnLeave(LeaveEventArgs args)
-			=> TShock.Players[args.Who]?.RemoveData(NanamiPvpData);
+		{
+			var player = TShock.Players[args.Who];
+
+			var data = player?.GetData<PlayerPvpData>(NanamiPvpData);
+			if (data == null)
+				return;
+
+			PvpDatas.Save(player.User.ID, data);
+		}
 
 		private static void OnGetData(GetDataEventArgs args)
 		{
@@ -164,17 +175,34 @@ namespace Nanami
 
 		private static void Show(CommandArgs args)
 		{
-			if (!args.Player.RealPlayer)
+			if (args.Parameters.Count == 0 && !args.Player.RealPlayer)
 			{
 				args.Player.SendErrorMessage("只有玩家才能使用战绩.");
 				return;
 			}
 
-			var dt = PlayerPvpData.GetData(args.Player.Index);
-			args.Player.SendInfoMessage($"{"---- PvP战绩 ----",38}");
-			args.Player.SendInfoMessage($"{"",11}* | 消灭 {dt.Kills,8} | {"连续消灭数目",6} {dt.SuccessiveKills,8} |");
-			args.Player.SendInfoMessage($"{"",11}* | 伤害 {dt.Hurts,8} | {"总承受伤害量",6} {dt.Endurance,8} |");
-			args.Player.SendInfoMessage($"{"",11}* | 死亡 {dt.Deaths,8} | {"最大连续消灭",6} {dt.MaxSuccessiveKills,8} |");
+			var player = args.Player;
+			if (args.Parameters.Count > 0)
+			{
+				var players = TShock.Utils.FindPlayer(string.Join(" ", args.Parameters));
+				if (players.Count == 0)
+				{
+					args.Player.SendErrorMessage("指定玩家无效!");
+					return;
+				}
+				if (players.Count > 1)
+				{
+					TShock.Utils.SendMultipleMatchError(args.Player, players.Select(p => p.Name));
+					return;
+				}
+				player = players.Single();
+			}
+
+			var dt = PlayerPvpData.GetData(player.Index);
+			args.Player.SendInfoMessage($"{"---- {0}的PvP战绩 ----",38}", player.Name);
+			args.Player.SendInfoMessage($"{"",11}* | 消灭 {dt.Eliminations,8} | {"连续消灭数目",6} {dt.KillStreak,8} |");
+			args.Player.SendInfoMessage($"{"",11}* | 伤害 {dt.DamageDone,8} | {"总承受伤害量",6} {dt.Endurance,8} |");
+			args.Player.SendInfoMessage($"{"",11}* | 死亡 {dt.Deaths,8} | {"最大连续消灭",6} {dt.BestKillStreak,8} |");
 		}
 
 		private static void OnReload(ReloadEventArgs e)

@@ -2,6 +2,7 @@
 using Terraria;
 using TShockAPI;
 using Microsoft.Xna.Framework;
+using TShockAPI.DB;
 
 namespace Nanami
 {
@@ -9,22 +10,22 @@ namespace Nanami
 	internal class PlayerPvpData
 	{
 		/// <summary> 击杀 </summary>
-		public int Kills { get; private set; }
+		public int Eliminations { get; private set; }
 
 		/// <summary> 死亡 </summary>
 		public int Deaths { get; private set; }
 
 		/// <summary> 伤害量 </summary>
-		public int Hurts { get; private set; }
+		public int DamageDone { get; private set; }
 
 		/// <summary> 承受伤害量 </summary>
 		public int Endurance { get; private set; }
 
 		/// <summary> 连续击杀 </summary>
-		public int SuccessiveKills { get; private set; }
+		public int KillStreak { get; private set; }
 
 		/// <summary> 最高连续击杀 </summary>
-		public int MaxSuccessiveKills { get; private set; }
+		public int BestKillStreak { get; private set; }
 
 		public readonly int PlayerIndex;
 
@@ -46,19 +47,19 @@ namespace Nanami
 		/// </summary>
 		public void Kill(ref string deathText)
 		{
-			Kills++;
-			SuccessiveKills++;
+			Eliminations++;
+			KillStreak++;
 
-			if (SuccessiveKills > MaxSuccessiveKills)
-				MaxSuccessiveKills = SuccessiveKills;
+			if (KillStreak > BestKillStreak)
+				BestKillStreak = KillStreak;
 
-			if (SuccessiveKills >= Nanami.Config.MinKillTime)
+			if (KillStreak >= Nanami.Config.MinKillTime)
 			{
-				var clrIndex = SuccessiveKills - Nanami.Config.MinKillTime;
+				var clrIndex = KillStreak - Nanami.Config.MinKillTime;
 
 				var msg = Nanami.Config.KillTexts.Length > clrIndex ?
 					Nanami.Config.KillTexts[clrIndex].GetColorTag() :
-					TShock.Utils.ColorTag($"连续消灭 {SuccessiveKills} 人!", Color.Yellow);
+					TShock.Utils.ColorTag($"连续消灭 {KillStreak} 人!", Color.Yellow);
 
 				deathText += msg;
 			}
@@ -72,9 +73,9 @@ namespace Nanami
 		{
 			Deaths++;
 			Endurance -= (int)Main.CalculatePlayerDamage(dmg, Main.player[PlayerIndex].statDefense);
-			if (SuccessiveKills >= Nanami.Config.MinKillTime)
-				TShock.Players[PlayerIndex].SendInfoMessage("你已死亡, 临死前最大连续击杀数: {0}", SuccessiveKills);
-			SuccessiveKills = 0;
+			if (KillStreak >= Nanami.Config.MinKillTime)
+				TShock.Players[PlayerIndex].SendInfoMessage("你已死亡, 临死前最大连续击杀数: {0}", KillStreak);
+			KillStreak = 0;
 		}
 
 		/// <summary>
@@ -92,7 +93,21 @@ namespace Nanami
 		/// <param name="calculatedDmg">经计算的攻击数值</param>
 		public void Damage(int calculatedDmg)
 		{
-			Hurts += calculatedDmg;
+			DamageDone += calculatedDmg;
+		}
+
+		public static PlayerPvpData LoadFromDb(int index, QueryResult reader)
+		{
+			return new PlayerPvpData(index)
+			{
+				Eliminations = reader.Get<int>("Eliminations"),
+				Deaths = reader.Get<int>("Deaths"),
+				DamageDone = reader.Get<int>("DamageDone"),
+				Endurance = reader.Get<int>("Endurance"),
+				KillStreak = reader.Get<int>("KillStreak"),
+				BestKillStreak = reader.Get<int>("BestKillStreak")
+			};
+			
 		}
 	}
 }
