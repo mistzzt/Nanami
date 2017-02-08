@@ -15,7 +15,7 @@ namespace Nanami
 			_database = conn;
 
 			var table = new SqlTable("PvpRecord",
-				new SqlColumn("Id", MySqlDbType.Int32),
+				new SqlColumn("Id", MySqlDbType.Int32) {Primary = true},
 				new SqlColumn("Eliminations", MySqlDbType.Int32),
 				new SqlColumn("Deaths", MySqlDbType.Int32),
 				new SqlColumn("DamageDone", MySqlDbType.Int32),
