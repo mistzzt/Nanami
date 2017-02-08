@@ -17,6 +17,8 @@ namespace Nanami
 	{
 		public const string NanamiPvpData = "nanami-pvp";
 
+		public const string PvpAllow = "nanami-allow";
+
 		public override string Name => "Nanami";
 		public override string Author => "MistZZT";
 		public override string Description => "A TShock-based plugin which collect statistics of players.";
@@ -64,7 +66,8 @@ namespace Nanami
 			Config = Configuration.Read(Configuration.FilePath);
 			Config.Write(Configuration.FilePath);
 
-			Commands.ChatCommands.Add(new Command("nanami.pvp.show", Show, "pvp", "战绩"));
+			Commands.ChatCommands.Add(new Command("nanami.pvp.show", Show, "pvp", "战绩") { AllowServer = false });
+			Commands.ChatCommands.Add(new Command("nanami.pvp.allow", SetPvpAllow, "pvpallow", "战绩可见") { AllowServer = false });
 		}
 
 		private void OnPostInitialize(EventArgs args)
@@ -128,6 +131,7 @@ namespace Nanami
 
 			var data = PvpDatas.Load(player);
 			player.SetData(NanamiPvpData, data);
+			player.SetData(PvpAllow, true);
 		}
 
 		private static void OnLeave(LeaveEventArgs args)
@@ -196,6 +200,11 @@ namespace Nanami
 					return;
 				}
 				player = players.Single();
+				if (!player.GetData<bool>(PvpAllow) && !args.Player.HasPermission("nanami.pvp.showother"))
+				{
+					args.Player.SendErrorMessage("{0} 已经禁止别人查看其战绩.", player.Name);
+					return;
+				}
 			}
 
 			var dt = PlayerPvpData.GetData(player.Index);
@@ -203,6 +212,18 @@ namespace Nanami
 			args.Player.SendInfoMessage($"{"",11}* | 消灭 {dt.Eliminations,8} | {"连续消灭数目",6} {dt.KillStreak,8} |");
 			args.Player.SendInfoMessage($"{"",11}* | 伤害 {dt.DamageDone,8} | {"总承受伤害量",6} {dt.Endurance,8} |");
 			args.Player.SendInfoMessage($"{"",11}* | 死亡 {dt.Deaths,8} | {"最大连续消灭",6} {dt.BestKillStreak,8} |");
+		}
+
+		private static void SetPvpAllow(CommandArgs args)
+		{
+			var current = args.Player.GetData<bool>(PvpAllow);
+
+			if (!current)
+				args.Player.SendSuccessMessage("开启战绩可见.");
+			if (current)
+				args.Player.SendSuccessMessage("关闭战绩可见.");
+
+			args.Player.SetData(PvpAllow, !current);
 		}
 
 		private static void OnReload(ReloadEventArgs e)
