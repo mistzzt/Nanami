@@ -1,5 +1,0 @@
-[submodule "TShock"]
-	path = TShock
-	url = https://git.coding.net/zitwang/TShock.git
-	branch = adv-cn_dev
-	ignore = dirty

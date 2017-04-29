@@ -1,14 +1,14 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using Terraria;
+﻿using Terraria;
 using TShockAPI;
 using Microsoft.Xna.Framework;
 using TShockAPI.DB;
 
 namespace Nanami
 {
-	[SuppressMessage("ReSharper", "InvertIf")]
 	internal class PlayerPvpData
 	{
+		private const string Key = "nanami-pvp";
+
 		/// <summary> 击杀 </summary>
 		public int Eliminations { get; private set; }
 
@@ -34,12 +34,31 @@ namespace Nanami
 			PlayerIndex = index;
 		}
 
-		public static PlayerPvpData GetData(int index)
+		public static PlayerPvpData GetPlayerData(int index)
 		{
 			var player = TShock.Players[index];
-			var data = player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+			return player == null ? null : GetPlayerData(player);
+		}
 
+		public static PlayerPvpData GetPlayerData(TSPlayer player)
+		{
+			if (player == null)
+				return null;
+
+			var data = player.GetData<PlayerPvpData>(Key);
+
+			if (data != null)
+				return data;
+
+			data = new PlayerPvpData(player.Index);
+			player.SetData(Key, data);
 			return data;
+		}
+
+		public static void LoadPlayerData(TSPlayer player)
+		{
+			var data = Nanami.PvpDatas.Load(player);
+			player.SetData(Key, data);
 		}
 
 		/// <summary>
@@ -74,7 +93,7 @@ namespace Nanami
 			Deaths++;
 			Endurance -= (int)Main.CalculatePlayerDamage(dmg, Main.player[PlayerIndex].statDefense);
 			if (KillStreak >= Nanami.Config.MinKillTime)
-				TShock.Players[PlayerIndex].SendInfoMessage("你已死亡, 临死前最大连续击杀数: {0}", KillStreak);
+				TShock.Players[PlayerIndex].SendInfoMessage("你已死亡；临死前最大连续击杀数: {0}。", KillStreak);
 			KillStreak = 0;
 		}
 

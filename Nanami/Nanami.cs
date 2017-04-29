@@ -12,11 +12,9 @@ using Microsoft.Xna.Framework;
 
 namespace Nanami
 {
-	[ApiVersion(2, 0)]
+	[ApiVersion(2, 1)]
 	public class Nanami : TerrariaPlugin
 	{
-		public const string NanamiPvpData = "nanami-pvp";
-
 		public const string PvpAllow = "nanami-allow";
 
 		public override string Name => "Nanami";
@@ -37,6 +35,7 @@ namespace Nanami
 			ServerApi.Hooks.NetGetData.Register(this, OnGetData, 1000);
 			ServerApi.Hooks.NetGreetPlayer.Register(this, OnGreetPlayer);
 			ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
+			OTAPI.Hooks.World.IO.PostSaveWorld += OnPostSaveWorld;
 
 			GetDataHandlers.TogglePvp += OnPvpToggle;
 			GeneralHooks.ReloadEvent += OnReload;
@@ -53,6 +52,7 @@ namespace Nanami
 				ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
 				ServerApi.Hooks.NetGreetPlayer.Deregister(this, OnGreetPlayer);
 				ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
+				OTAPI.Hooks.World.IO.PostSaveWorld -= OnPostSaveWorld;
 
 				GetDataHandlers.TogglePvp -= OnPvpToggle;
 				GeneralHooks.ReloadEvent -= OnReload;
@@ -66,7 +66,7 @@ namespace Nanami
 			Config = Configuration.Read(Configuration.FilePath);
 			Config.Write(Configuration.FilePath);
 
-			Commands.ChatCommands.Add(new Command("nanami.pvp.show", Show, "pvp", "战绩") { AllowServer = false });
+			Commands.ChatCommands.Add(new Command("nanami.pvp.show", Show, "pvp", "战绩"));
 			Commands.ChatCommands.Add(new Command("nanami.pvp.allow", SetPvpAllow, "pvpallow", "战绩可见") { AllowServer = false });
 		}
 
@@ -93,32 +93,35 @@ namespace Nanami
 				return;
 			}
 
-			if (Main.player.Where(p => p != null && p.active).All(p => !p.hostile))
+			if (Main.player.Where(p => p?.active == true).All(p => !p.hostile))
 			{
 				return;
 			}
 
 			var max =
-				from player in TShock.Players
-				where player != null && player.Active && player.RealPlayer && player.TPlayer.hostile
-				let data = PlayerPvpData.GetData(player.Index)
-				orderby data.KillStreak descending
-				select data;
+				(from player in TShock.Players
+				 where player?.Active == true && player.RealPlayer && player.TPlayer.hostile
+				 let data = PlayerPvpData.GetPlayerData(player.Index)
+				 orderby data.KillStreak descending
+				 select data).ToArray();
 
-			var sb = new StringBuilder("[PvP战绩] 连续击杀排行: ");
+			var sb = new StringBuilder(new string('=', 10)).Append("PvP战绩排行").AppendLine(new string('=', 10));
 			for (var i = 0; i < 3; ++i)
 			{
-				if (max.Count() <= i)
+				if (max.Length <= i)
 					break;
+				sb
+					.Append($"第{(i + 1).ToChineseCharacterDigit()}名： {max[i].KillStreak.ToChineseCharacterDigit()}连杀".PadRight(13))
+					.Append(" —— ")
+					.AppendLine(TShock.Players[max.ElementAt(i).PlayerIndex].Name);
 
-				sb.Append($"{$"第{i + 1}名",3}{TShock.Players[max.ElementAt(i).PlayerIndex].Name,8}/{max.ElementAt(i).KillStreak} | ");
 			}
-			var sbText = sb.ToString();
+			var sbText = sb.ToString().TrimEnd();
 
-			TShock.Players.Where(p => p != null && p.Active && p.RealPlayer && p.TPlayer.hostile).ForEach(p =>
+			foreach (var player in TShock.Players.Where(p => p != null && p.Active && p.RealPlayer && p.TPlayer.hostile))
 			{
-				p.SendMessage(sbText, Color.Orange);
-			});
+				player.SendMessage(sbText, Color.Orange);
+			}
 
 			_timerCount = 0;
 		}
@@ -129,8 +132,7 @@ namespace Nanami
 			if (player == null)
 				return;
 
-			var data = PvpDatas.Load(player);
-			player.SetData(NanamiPvpData, data);
+			PlayerPvpData.LoadPlayerData(player);
 			player.SetData(PvpAllow, true);
 		}
 
@@ -138,11 +140,24 @@ namespace Nanami
 		{
 			var player = TShock.Players[args.Who];
 
-			var data = player?.GetData<PlayerPvpData>(NanamiPvpData);
+			var data = PlayerPvpData.GetPlayerData(player);
 			if (data == null)
 				return;
 
 			PvpDatas.Save(player.User.ID, data);
+		}
+
+		private static void OnPostSaveWorld(bool useCloudSaving, bool resetTime)
+		{
+			foreach (var plr in TShock.Players.Where(p => p?.Active == true && p.TPlayer?.hostile == true))
+			{
+				var data = PlayerPvpData.GetPlayerData(plr);
+
+				if (data == null)
+					continue;
+
+				PvpDatas.Save(plr.User.ID, data);
+			}
 		}
 
 		private static void OnGetData(GetDataEventArgs args)
@@ -207,7 +222,7 @@ namespace Nanami
 				}
 			}
 
-			var dt = PlayerPvpData.GetData(player.Index);
+			var dt = PlayerPvpData.GetPlayerData(player.Index);
 			args.Player.SendInfoMessage($"{"---- {0}的PvP战绩 ----",38}", player.Name);
 			args.Player.SendInfoMessage($"{"",11}* | 消灭 {dt.Eliminations,8} | {"连续消灭数目",6} {dt.KillStreak,8} |");
 			args.Player.SendInfoMessage($"{"",11}* | 伤害 {dt.DamageDone,8} | {"总承受伤害量",6} {dt.Endurance,8} |");

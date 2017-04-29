@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.IO.Streams;
 using Terraria;
 using Terraria.DataStructures;
+using Terraria.Localization;
 using TShockAPI;
 
 namespace Nanami
 {
-	[SuppressMessage("ReSharper", "InvertIf")]
 	internal class Handlers
 	{
 		private static readonly Dictionary<PacketTypes, GetDataHandlerDelegate>
@@ -63,10 +62,7 @@ namespace Nanami
 					TShock.Utils.Kick(args.Player, $"玩家攻击数值超过 {TShock.Config.MaxDamage}.");
 					return true;
 				}
-				else
-				{
-					args.Player.Disable($"玩家攻击数值超过 {TShock.Config.MaxDamage}.", DisableFlags.WriteToLogAndConsole);
-				}
+				args.Player.Disable($"玩家攻击数值超过 {TShock.Config.MaxDamage}.", DisableFlags.WriteToLogAndConsole);
 				args.Player.SendData(PacketTypes.PlayerHp, "", id);
 				args.Player.SendData(PacketTypes.PlayerUpdate, "", id);
 				return true;
@@ -101,14 +97,14 @@ namespace Nanami
 			}
 
 			// 记录 伤害量
-			var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+			var data = PlayerPvpData.GetPlayerData(args.Player);
 
 			var calculatedDmg = (int) Main.CalculatePlayerDamage(dmg, Main.player[id].statDefense);
 
 			data.Damage(calculatedDmg);
 
 			// 记录 承受伤害量
-			PlayerPvpData.GetData(id).Hurt(calculatedDmg);
+			PlayerPvpData.GetPlayerData(id).Hurt(calculatedDmg);
 
 			return false;
 		}
@@ -145,7 +141,7 @@ namespace Nanami
 			}
 
 			args.Player.RespawnTimer = Nanami.Config.RespawnPvPSeconds;
-			var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+			var data = PlayerPvpData.GetPlayerData(args.Player);
 
 			// 处理死亡事件
 			data.Die(dmg);
@@ -169,18 +165,17 @@ namespace Nanami
 
 			if (killer == -1)
 			{
-				TShock.Log.ConsoleError("[Nanami] {0} 的死亡消息异常: {0} {1}", args.Player.Name, text);
 				return false;
 			}
 
-			var deathText = $" 被 {TShock.Players[killer].Name} 杀死了!";
+			var deathText = $"被{TShock.Players[killer].Name}杀死了!";
 
 			// 处理杀死事件
-			var killerData = PlayerPvpData.GetData(killer);
+			var killerData = PlayerPvpData.GetPlayerData(killer);
 			killerData.Kill(ref deathText);
 
 			Main.player[id].KillMeOld(dmg, direction, pvp == 1, deathText);
-			NetMessage.SendData((int)PacketTypes.PlayerKillMe, -1, id, deathText, id, direction, dmg, pvp);
+			NetMessage.SendData((int)PacketTypes.PlayerKillMe, -1, id, NetworkText.FromLiteral(deathText), id, direction, dmg, pvp);
 
 			return true;
 		}
@@ -217,7 +212,7 @@ namespace Nanami
 				}
 
 				args.Player.RespawnTimer = Nanami.Config.RespawnPvPSeconds;
-				var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+				var data = PlayerPvpData.GetPlayerData(args.Player);
 
 				// 处理死亡事件
 				data.Die(dmg);
@@ -226,26 +221,26 @@ namespace Nanami
 				var killerProj = playerDeathReason2.SourceProjectileType;
 				var killerItem = playerDeathReason2.SourceItemType;
 
-				var deathText = " 被{0}的{1}杀死了!";
+				var deathText = "被{0}的{1}杀死了!";
 
 				if (killerProj != 0)
 				{
-					deathText = string.Format(deathText, TShock.Players[killer].Name, Lang.GetProjectileNameByType(killerProj));
+					deathText = string.Format(deathText, TShock.Players[killer].Name, Lang.GetProjectileName(killerProj));
 				}
 				else if (killerItem != 0)
 				{
-					deathText = string.Format(deathText, TShock.Players[killer].Name, Lang.itemName(killerItem));
+					deathText = string.Format(deathText, TShock.Players[killer].Name, Lang.GetItemNameValue(killerItem));
 				}
 				else
 				{
-					deathText = $" 被{TShock.Players[killer].Name}杀死了!";
+					deathText = $"被{TShock.Players[killer].Name}杀死了!";
 				}
 
 				// 处理杀死事件
-				var killerData = PlayerPvpData.GetData(killer);
+				var killerData = PlayerPvpData.GetPlayerData(killer);
 				killerData.Kill(ref deathText);
 
-				playerDeathReason2.SourceCustomReason = deathText;
+				playerDeathReason2.SourceCustomReason = args.Player.Name + deathText;
 
 				Main.player[plr].KillMe(playerDeathReason2, dmg, direction, true);
 				NetMessage.SendPlayerDeath(plr, playerDeathReason2, dmg, direction, true, -1, args.Player.Index);
@@ -285,11 +280,7 @@ namespace Nanami
 						TShock.Utils.Kick(args.Player, $"玩家攻击数值超过 {TShock.Config.MaxDamage}.");
 						return true;
 					}
-					// ReSharper disable once RedundantIfElseBlock
-					else
-					{
-						args.Player.Disable($"玩家攻击数值超过 {TShock.Config.MaxDamage}.", DisableFlags.WriteToLogAndConsole);
-					}
+					args.Player.Disable($"玩家攻击数值超过 {TShock.Config.MaxDamage}.", DisableFlags.WriteToLogAndConsole);
 					args.Player.SendData(PacketTypes.PlayerHp, "", plr);
 					args.Player.SendData(PacketTypes.PlayerUpdate, "", plr);
 					return true;
@@ -324,13 +315,13 @@ namespace Nanami
 				}
 
 				// 记录 伤害量
-				var data = args.Player.GetData<PlayerPvpData>(Nanami.NanamiPvpData);
+				var data = PlayerPvpData.GetPlayerData(args.Player);
 
 				var calculatedDamage = (int)Main.CalculatePlayerDamage(dmg, Main.player[plr].statDefense);
 				data.Damage(calculatedDamage);
 
 				// 记录 承受伤害量
-				PlayerPvpData.GetData(plr).Hurt(calculatedDamage);
+				PlayerPvpData.GetPlayerData(plr).Hurt(calculatedDamage);
 
 				return false;
 			}
