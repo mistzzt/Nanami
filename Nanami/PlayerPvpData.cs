@@ -36,23 +36,12 @@ namespace Nanami
 
 		public static PlayerPvpData GetPlayerData(int index)
 		{
-			var player = TShock.Players[index];
-			return player == null ? null : GetPlayerData(player);
+			return GetPlayerData(TShock.Players[index]);
 		}
 
 		public static PlayerPvpData GetPlayerData(TSPlayer player)
 		{
-			if (player == null)
-				return null;
-
-			var data = player.GetData<PlayerPvpData>(Key);
-
-			if (data != null)
-				return data;
-
-			data = new PlayerPvpData(player.Index);
-			player.SetData(Key, data);
-			return data;
+			return player?.GetData<PlayerPvpData>(Key);
 		}
 
 		public static void LoadPlayerData(TSPlayer player)
