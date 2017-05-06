@@ -233,7 +233,7 @@ namespace Nanami
 				}
 				else
 				{
-					deathText = $"被{TShock.Players[killer].Name}杀死了!";
+					deathText = $"被{TShock.Players[killer].Name}杀死了！";
 				}
 
 				// 处理杀死事件

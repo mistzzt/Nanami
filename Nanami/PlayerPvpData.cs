@@ -69,7 +69,13 @@ namespace Nanami
 					Nanami.Config.KillTexts[clrIndex].GetColorTag() :
 					TShock.Utils.ColorTag($"连续消灭 {KillStreak} 人!", Color.Yellow);
 
-				deathText += msg;
+				var player = TShock.Players[PlayerIndex];
+				if (player.GetData<bool>("pvp_Heal"))
+				{
+					player.Heal(player.GetData<int>("LifeHeal"));
+				}
+
+				deathText += player.Name + msg;
 			}
 		}
 
