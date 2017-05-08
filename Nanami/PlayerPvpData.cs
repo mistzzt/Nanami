@@ -58,6 +58,12 @@ namespace Nanami
 			Eliminations++;
 			KillStreak++;
 
+			var player = TShock.Players[PlayerIndex];
+			if (player.GetData<bool>("pvp_Heal"))
+			{
+				player.Heal(player.GetData<int>("LifeHeal"));
+			}
+
 			if (KillStreak > BestKillStreak)
 				BestKillStreak = KillStreak;
 
@@ -68,12 +74,6 @@ namespace Nanami
 				var msg = Nanami.Config.KillTexts.Length > clrIndex ?
 					Nanami.Config.KillTexts[clrIndex].GetColorTag() :
 					TShock.Utils.ColorTag($"连续消灭 {KillStreak} 人!", Color.Yellow);
-
-				var player = TShock.Players[PlayerIndex];
-				if (player.GetData<bool>("pvp_Heal"))
-				{
-					player.Heal(player.GetData<int>("LifeHeal"));
-				}
 
 				deathText += player.Name + msg;
 			}
