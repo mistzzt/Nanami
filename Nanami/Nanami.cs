@@ -185,7 +185,7 @@ namespace Nanami
             var player = args.Player;
             if (args.Parameters.Count > 0)
             {
-                var players = TShock.Utils.FindPlayer(string.Join(" ", args.Parameters));
+                var players = TSPlayer.FindByNameOrID(string.Join(" ", args.Parameters));
                 if (players.Count == 0)
                 {
                     args.Player.SendErrorMessage("指定玩家无效!");
@@ -193,7 +193,7 @@ namespace Nanami
                 }
                 if (players.Count > 1)
                 {
-                    TShock.Utils.SendMultipleMatchError(args.Player, players.Select(p => p.Name));
+                    args.Player.SendMultipleMatchError(players.Select(p => p.Name));
                     return;
                 }
                 player = players.Single();
